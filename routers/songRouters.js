@@ -7,7 +7,7 @@ import {
 
 const router = express.Router();
 
-router.get('/', getAllSongs);
-router.get('/:id', createSong);
+router.get('/:albumId', getAllSongs);
+router.post('/', createSong);
 
 export default router;
