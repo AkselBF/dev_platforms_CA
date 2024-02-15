@@ -1,6 +1,8 @@
 import { client } from '../config/db.js';
 import mongodb from 'mongodb';
 
+const { ObjectId } = mongodb;
+
 // Get all albums
 const getAllAlbums = async (req, res) => {
   try {
@@ -54,7 +56,7 @@ const createAlbum = async (req, res) => {
 const deleteAlbum = async (req, res) => {
     try {
         const albumsCollection = client.db('musicTesting').collection('albums');
-        const result = await albumsCollection.deleteOne({ _id: mongodb.ObjectId(req.params.id) });
+        const result = await albumsCollection.deleteOne({ _id: ObjectId.createFromHexString(req.params.id) });
         if (result.deletedCount === 0) {
             return res.status(404).json({ message: 'Album not found' });
         }
