@@ -16,6 +16,21 @@ const getAllAlbums = async (req, res) => {
   }
 };
 
+// Get a single album via ID
+const getAlbumById = async (req, res) => {
+    try {
+        const albumsCollection = client.db('musicTesting').collection('albums');
+        const album = await albumsCollection.findOne({ _id: ObjectId.createFromHexString(req.params.id) });
+        if (!album) {
+            return res.status(404).json({ message: 'Album not found' });
+        }
+        res.json(album);
+    } catch (error) {
+        console.error('Error getting album by ID:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+};
+
 // Create a new album
 const createAlbum = async (req, res) => {
   try {
@@ -54,22 +69,25 @@ const createAlbum = async (req, res) => {
 
 // Function to delete an album
 const deleteAlbum = async (req, res) => {
-    try {
-        const albumsCollection = client.db('musicTesting').collection('albums');
-        const result = await albumsCollection.deleteOne({ _id: ObjectId.createFromHexString(req.params.id) });
-        if (result.deletedCount === 0) {
-            return res.status(404).json({ message: 'Album not found' });
-        }
-        res.json({ message: 'Album deleted successfully' });
-    } catch (error) {
-        console.error('Error deleting album:', error);
-        res.status(500).json({ message: 'Internal server error' });
+  try {
+    const albumsCollection = client.db('musicTesting').collection('albums');
+    const result = await albumsCollection.deleteOne({ _id: ObjectId.createFromHexString(req.params.id) });
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ message: 'Album not found' });
     }
+
+    res.json({ message: 'Album deleted successfully' });
+  } 
+  catch (error) {
+    console.error('Error deleting album:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
 };
 
 
 export {
   getAllAlbums,
+  getAlbumById,
   createAlbum,
   deleteAlbum
 };
