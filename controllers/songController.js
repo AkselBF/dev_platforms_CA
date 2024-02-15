@@ -3,8 +3,38 @@ import mongodb from 'mongodb';
 
 const { ObjectId } = mongodb;
 
-// Function to get all songs in an album
+// Get all songs
 const getAllSongs = async (req, res) => {
+  try {
+    const songsCollection = client.db('musicTesting').collection('songs');
+    const songs = await songsCollection.find().toArray();
+    res.json(songs);
+  } 
+  catch (error) {
+    console.error('Error getting songs:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+const getSongById = async (req, res) => {
+  try {
+    const songsCollection = client.db('musicTesting').collection('songs');
+    const song = await songsCollection.findOne({ _id: ObjectId.createFromHexString(req.params.id) });
+    if (!song) {
+      return res.status(404).json({ message: 'Song not found' });
+    }
+    
+    res.json(song);
+  } 
+  catch (error) {
+    console.error('Error getting song by ID:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+}
+
+// Get all songs in an album
+/*
+const getAlbumSongs = async (req, res) => {
   try {
     const { albumId } = req.params;
     const songsCollection = client.db('musicTesting').collection('songs');
@@ -15,7 +45,7 @@ const getAllSongs = async (req, res) => {
     console.error('Error getting songs:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
-};
+};*/
 
 // Create a new song
 const createSong = async (req, res) => {
@@ -56,5 +86,6 @@ const createSong = async (req, res) => {
 
 export {
   getAllSongs,
+  getSongById,
   createSong
 };
