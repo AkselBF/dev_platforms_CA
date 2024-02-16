@@ -34,19 +34,28 @@ const getSongById = async (req, res) => {
 }
 
 // Get all songs in an album
-/*
 const getAlbumSongs = async (req, res) => {
   try {
-    const { albumId } = req.params;
+    const albumId = req.params.id;
+
+    const albumsCollection = client.db('musicTesting').collection('albums');
+    const album = await albumsCollection.findOne({ _id: ObjectId.createFromHexString(albumId) });
+
+    if (!album) {
+      return res.status(404).json({ message: 'Album not found' });
+    }
+
     const songsCollection = client.db('musicTesting').collection('songs');
-    const songs = await songsCollection.find({ album: ObjectId.createFromHexString(albumId) }).toArray();
-    res.json(songs);
+    const songs = await songsCollection.find({ _id: { $in: album.songs } }).toArray();
+    const songNames = songs.map(song => song.title);
+
+    res.json(songNames);
   } 
   catch (error) {
-    console.error('Error getting songs:', error);
+    console.error('Error retrieving album songs:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
-};*/
+};
 
 // Create a new song
 const createSong = async (req, res) => {
@@ -174,6 +183,7 @@ const deleteSong = async (req, res) => {
 export {
   getAllSongs,
   getSongById,
+  getAlbumSongs,
   createSong,
   updateSong,
   deleteSong
