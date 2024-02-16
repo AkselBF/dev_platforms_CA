@@ -16,6 +16,7 @@ const getAllSongs = async (req, res) => {
   }
 };
 
+// Get a single song via Id
 const getSongById = async (req, res) => {
   try {
     const songsCollection = client.db('musicTesting').collection('songs');
@@ -69,7 +70,6 @@ const createSong = async (req, res) => {
       throw new Error('Inserted song document not found');
     }
         
-    // Update the corresponding album document to add the song to its songs array
     const albumsCollection = client.db('musicTesting').collection('albums');
     await albumsCollection.updateOne(
       { name: album },
@@ -92,10 +92,11 @@ const updateSong = async (req, res) => {
 
     if (title) updateFields.title = title;
     if (length) updateFields.length = length;
+
     if (album && ObjectId.isValid(album)) {
       updateFields.album = ObjectId(album);
-    } else if (album) {
-      // If album is not a valid ObjectId, assume it's the name of the album and find its ObjectId
+    } 
+    else if (album) {
       const albumsCollection = client.db('musicTesting').collection('albums');
       const albumDocument = await albumsCollection.findOne({ name: album });
       if (!albumDocument) {
@@ -115,16 +116,13 @@ const updateSong = async (req, res) => {
       return res.status(404).json({ message: 'Song not found' });
     }
 
-    // Update the corresponding album documents
     const albumsCollection = client.db('musicTesting').collection('albums');
 
-    // Remove the song from the old album
     await albumsCollection.updateOne(
       { songs: songId },
       { $pull: { songs: songId } }
     );
 
-    // Add the song to the new album
     await albumsCollection.updateOne(
       { _id: updateFields.album },
       { $addToSet: { songs: songId } }
@@ -138,13 +136,32 @@ const updateSong = async (req, res) => {
   }
 };
 
+// Delete a song
 const deleteSong = async (req, res) => {
   try {
+    const songId = ObjectId.createFromHexString(req.params.id);
     const songsCollection = client.db('musicTesting').collection('songs');
-    const result = await songsCollection.deleteOne({ _id: ObjectId.createFromHexString(req.params.id) });
+
+    const albumCollection = client.db('musicTesting').collection('albums');
+    const album = await albumCollection.findOne({ songs: songId });
+
+    if (!album) {
+      const result = await songsCollection.deleteOne({ _id: songId });
+      if (result.deletedCount === 0) {
+        return res.status(404).json({ message: 'Song not found' });
+      }
+      return res.json({ message: 'Song deleted successfully' });
+    }
+
+    const result = await songsCollection.deleteOne({ _id: songId });
     if (result.deletedCount === 0) {
       return res.status(404).json({ message: 'Song not found' });
     }
+
+    await albumCollection.updateOne(
+      { _id: album._id },
+      { $pull: { songs: songId } }
+    );
   
     res.json({ message: 'Song deleted successfully' });
   } 
@@ -161,45 +178,3 @@ export {
   updateSong,
   deleteSong
 };
-
-
-/*
-const updateSong = async (req, res) => {
-  try {
-    const { title, length, album } = req.body;
-    const updateFields = {};
-
-    if (title) updateFields.title = title;
-    if (length) updateFields.length = length;
-    if (album) {
-      const albumsCollection = client.db('musicTesting').collection('albums');
-      const albumDocument = await albumsCollection.findOne({ name: album });
-      if (!albumDocument) {
-        return res.status(404).json({ message: 'Album not found' });
-      }
-      console.log('Album found:', albumDocument);
-      updateFields.album = albumDocument._id;
-    }
-
-    const songsCollection = client.db('musicTesting').collection('songs');
-    console.log('Updating song with ID:', req.params.id);
-    console.log('Update fields:', updateFields);
-    const result = await songsCollection.updateOne(
-      { _id: ObjectId.createFromHexString(req.params.id) },
-      { $set: updateFields }
-    );
-
-    console.log('Update result:', result);
-
-    if (result.matchedCount === 0) {
-      return res.status(404).json({ message: 'Song not found' });
-    }
-
-    res.json({ message: 'Song updated successfully' });
-  } 
-  catch (error) {
-    console.error('Error updating song:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-};
-*/
