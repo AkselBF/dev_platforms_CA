@@ -16,6 +16,7 @@ const getAllSongs = async (req, res) => {
   }
 };
 
+// Get a single song via Id
 const getSongById = async (req, res) => {
   try {
     const songsCollection = client.db('musicTesting').collection('songs');
@@ -33,19 +34,28 @@ const getSongById = async (req, res) => {
 }
 
 // Get all songs in an album
-/*
 const getAlbumSongs = async (req, res) => {
   try {
-    const { albumId } = req.params;
+    const albumId = req.params.id;
+
+    const albumsCollection = client.db('musicTesting').collection('albums');
+    const album = await albumsCollection.findOne({ _id: ObjectId.createFromHexString(albumId) });
+
+    if (!album) {
+      return res.status(404).json({ message: 'Album not found' });
+    }
+
     const songsCollection = client.db('musicTesting').collection('songs');
-    const songs = await songsCollection.find({ album: ObjectId.createFromHexString(albumId) }).toArray();
-    res.json(songs);
+    const songs = await songsCollection.find({ _id: { $in: album.songs } }).toArray();
+    const songNames = songs.map(song => song.title);
+
+    res.json(songNames);
   } 
   catch (error) {
-    console.error('Error getting songs:', error);
+    console.error('Error retrieving album songs:', error);
     res.status(500).json({ message: 'Internal server error' });
   }
-};*/
+};
 
 // Create a new song
 const createSong = async (req, res) => {
@@ -69,7 +79,6 @@ const createSong = async (req, res) => {
       throw new Error('Inserted song document not found');
     }
         
-    // Update the corresponding album document to add the song to its songs array
     const albumsCollection = client.db('musicTesting').collection('albums');
     await albumsCollection.updateOne(
       { name: album },
@@ -92,17 +101,41 @@ const updateSong = async (req, res) => {
 
     if (title) updateFields.title = title;
     if (length) updateFields.length = length;
-    if (album) updateFields.album = ObjectId(album);
+
+    if (album && ObjectId.isValid(album)) {
+      updateFields.album = ObjectId(album);
+    } 
+    else if (album) {
+      const albumsCollection = client.db('musicTesting').collection('albums');
+      const albumDocument = await albumsCollection.findOne({ name: album });
+      if (!albumDocument) {
+        return res.status(404).json({ message: 'Album not found' });
+      }
+      updateFields.album = albumDocument._id;
+    }
 
     const songsCollection = client.db('musicTesting').collection('songs');
+    const songId = ObjectId.createFromHexString(req.params.id);
     const result = await songsCollection.updateOne(
-      { _id: ObjectId.createFromHexString(req.params.id) },
+      { _id: songId },
       { $set: updateFields }
     );
 
     if (result.matchedCount === 0) {
       return res.status(404).json({ message: 'Song not found' });
     }
+
+    const albumsCollection = client.db('musicTesting').collection('albums');
+
+    await albumsCollection.updateOne(
+      { songs: songId },
+      { $pull: { songs: songId } }
+    );
+
+    await albumsCollection.updateOne(
+      { _id: updateFields.album },
+      { $addToSet: { songs: songId } }
+    );
 
     res.json({ message: 'Song updated successfully' });
   } 
@@ -112,13 +145,32 @@ const updateSong = async (req, res) => {
   }
 };
 
+// Delete a song
 const deleteSong = async (req, res) => {
   try {
+    const songId = ObjectId.createFromHexString(req.params.id);
     const songsCollection = client.db('musicTesting').collection('songs');
-    const result = await songsCollection.deleteOne({ _id: ObjectId.createFromHexString(req.params.id) });
+
+    const albumCollection = client.db('musicTesting').collection('albums');
+    const album = await albumCollection.findOne({ songs: songId });
+
+    if (!album) {
+      const result = await songsCollection.deleteOne({ _id: songId });
+      if (result.deletedCount === 0) {
+        return res.status(404).json({ message: 'Song not found' });
+      }
+      return res.json({ message: 'Song deleted successfully' });
+    }
+
+    const result = await songsCollection.deleteOne({ _id: songId });
     if (result.deletedCount === 0) {
       return res.status(404).json({ message: 'Song not found' });
     }
+
+    await albumCollection.updateOne(
+      { _id: album._id },
+      { $pull: { songs: songId } }
+    );
   
     res.json({ message: 'Song deleted successfully' });
   } 
@@ -131,6 +183,7 @@ const deleteSong = async (req, res) => {
 export {
   getAllSongs,
   getSongById,
+  getAlbumSongs,
   createSong,
   updateSong,
   deleteSong
