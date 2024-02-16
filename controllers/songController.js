@@ -84,8 +84,54 @@ const createSong = async (req, res) => {
   }
 };
 
+// Update an existing song
+const updateSong = async (req, res) => {
+  try {
+    const { title, length, album } = req.body;
+    const updateFields = {};
+
+    if (title) updateFields.title = title;
+    if (length) updateFields.length = length;
+    if (album) updateFields.album = ObjectId(album);
+
+    const songsCollection = client.db('musicTesting').collection('songs');
+    const result = await songsCollection.updateOne(
+      { _id: ObjectId.createFromHexString(req.params.id) },
+      { $set: updateFields }
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({ message: 'Song not found' });
+    }
+
+    res.json({ message: 'Song updated successfully' });
+  } 
+  catch (error) {
+    console.error('Error updating song:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+const deleteSong = async (req, res) => {
+  try {
+    const songsCollection = client.db('musicTesting').collection('songs');
+    const result = await songsCollection.deleteOne({ _id: ObjectId.createFromHexString(req.params.id) });
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ message: 'Song not found' });
+    }
+  
+    res.json({ message: 'Song deleted successfully' });
+  } 
+  catch (error) {
+    console.error('Error deleting song:', error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 export {
   getAllSongs,
   getSongById,
-  createSong
+  createSong,
+  updateSong,
+  deleteSong
 };
