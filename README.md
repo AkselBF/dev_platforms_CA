@@ -134,10 +134,18 @@ api-testing-1uft.onrender.com/api/songs/:songId
 ```
 <br>
 
-## Result
-When properly requested, the data within the collections will change. Whenever you make a Postman request and succeed, feel free to check the link(s) bellow to see the changes: <br>
-[link](https://api-testing-1uft.onrender.com/api/albums) <br>
-[link](https://api-testing-1uft.onrender.com/api/songs)
+## Results
+When properly requested, the data within the collections will change. Whenever you make a Postman request and succeed, feel free to check the urls bellow to see the changes: <br>
+**Link to the albums**
+```
+https://api-testing-1uft.onrender.com/api/albums
+```
+<br>
+
+**Link to the songs**
+```
+https://api-testing-1uft.onrender.com/api/songs
+```
 <br>
 
 The url itself can be manually changed, but the page will appear properly only if the endpoints are correct.
